@@ -1,0 +1,45 @@
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, BackHandler, Alert } from 'react-native';
+
+export default function AddProductScreen({ navigation }) {
+
+  useEffect(() => {
+    const backAction = () => {
+      // Custom behavior on back button
+      navigation.goBack(); // Goes to the previous screen
+      return true; // Prevent default behavior
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => backHandler.remove(); // Cleanup
+  }, []);
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>➕ Add New Product</Text>
+      <Text style={styles.info}>Here you can add details for a new product.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f4f8',
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#0077b6',
+    marginBottom: 20,
+  },
+  info: {
+    fontSize: 16,
+    color: '#555',
+    textAlign: 'center',
+  },
+});

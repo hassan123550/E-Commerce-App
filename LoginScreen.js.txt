@@ -1,0 +1,225 @@
+import React, { Component } from 'react';
+import {
+  Text,
+  View,
+  StyleSheet,
+  ImageBackground,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Animated,
+  Easing,
+  Alert,
+} from 'react-native';
+
+export default class LoginScreen extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      fadeAnim: new Animated.Value(1),
+      scaleAnim: new Animated.Value(1),
+      email: '',
+      password: '',
+    };
+  }
+
+  handleEnter = () => {
+    const { email, password } = this.state;
+
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Warning', 'Please enter both email and password.');
+      return;
+    }
+
+    // Start animation
+    Animated.parallel([
+      Animated.timing(this.state.fadeAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.ease),
+      }),
+      Animated.timing(this.state.scaleAnim, {
+        toValue: 0.9,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      this.props.navigation.navigate('OrderHistory');
+    });
+  };
+
+  render() {
+    const { fadeAnim, scaleAnim, email, password } = this.state;
+
+    return (
+      <Animated.View
+        style={[
+          styles.animatedContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <ImageBackground
+            source={require('../assets/ali.png')}
+            style={styles.Imageback}
+          >
+            {/* HEADER */}
+            <View style={styles.header}>
+              <Image source={require('../assets/Hassan.png')} style={styles.logo} />
+              <Text style={styles.headerText}>
+                I’m a React Native developer with a focus on building scalable and secure e-commerce mobile apps.
+                My services include user authentication (login/signup), product catalog setup, payment integration (Stripe/Razorpay),
+                and order tracking features...
+              </Text>
+            </View>
+
+            {/* LOGIN TITLE */}
+            <Text style={styles.text}>E-Commerce/Login</Text>
+
+            {/* EMAIL */}
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={(text) => this.setState({ email: text })}
+                keyboardType="email-address"
+              />
+            </View>
+
+            {/* PASSWORD */}
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                secureTextEntry
+                value={password}
+                onChangeText={(text) => this.setState({ password: text })}
+              />
+            </View>
+
+            {/* ENTER BUTTON */}
+            <TouchableOpacity onPress={this.handleEnter} style={styles.enterbutton}>
+              <Text style={{ color: 'white', fontSize: 20, fontWeight: 'bold' }}>Login</Text>
+            </TouchableOpacity>
+
+            {/* SIGNUP LINK */}
+            <TouchableOpacity onPress={() => this.props.navigation.navigate('SignUp')}>
+              <Text style={{ color: 'white', fontSize: 12, marginVertical: 10 }}>
+                I Have Already SignUp!
+              </Text>
+            </TouchableOpacity>
+
+            {/* CREDIT TEXT */}
+            <Text style={styles.hassantext}>@Designed by Hassan Ali</Text>
+          </ImageBackground>
+        </ScrollView>
+      </Animated.View>
+    );
+  }
+}
+
+const styles = StyleSheet.create({
+  animatedContainer: {
+    flex: 1,
+    backgroundColor: '#456785',
+  },
+  scrollContainer: {
+    flexGrow: 1,
+  },
+  Imageback: {
+    minHeight: 720,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  text: {
+    fontSize: 25,
+    textAlign: 'center',
+    margin: 10,
+    color: '#d3d3d3',
+    fontWeight: 'bold',
+    marginTop: 120,
+    marginVertical: 50,
+  },
+  input: {
+    height: 50,
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginVertical: 15,
+    fontSize: 18,
+    color: '#333',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    textAlign: 'left',
+  },
+  fieldContainer: {
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  label: {
+    position: 'absolute',
+    top: -8,
+    left: 35,
+    paddingHorizontal: 8,
+    fontSize: 12,
+    color: '#00ffff',
+    zIndex: 1,
+  },
+  enterbutton: {
+    width: '80%',
+    height: 50,
+    backgroundColor: '#00bfff',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    marginTop: 20,
+    paddingHorizontal: 10,
+  },
+  logo: {
+    height: 40,
+    width: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 2,
+    marginTop: -70,
+  },
+  headerText: {
+    color: 'white',
+    fontSize: 9,
+    flex: 1,
+    marginTop: -20,
+    marginLeft: -5,
+  },
+  hassantext: {
+    marginTop: 120,
+    color: '#ccc',
+  },
+});

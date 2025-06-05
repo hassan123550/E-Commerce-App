@@ -1,0 +1,315 @@
+import React, { Component } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  Animated,
+  Easing,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  TextInput,
+} from 'react-native';
+
+// Dummy CardField Component
+const CardField = ({ onCardChange, ...props }) => {
+  return (
+    <View style={[styles.cardContainer, props.style]}>
+      <Text style={{ color: '#aaa', marginBottom: 5 }}>Card Number (Dummy Input)</Text>
+      <TextInput
+        style={styles.cardFieldDummyInput}
+        placeholder={props.placeholders?.number || '•••• •••• •••• ••••'}
+        keyboardType="numeric"
+        maxLength={19}
+        onChangeText={(text) => {
+          if (text.replace(/\s/g, '').length === 16) {
+            onCardChange({ complete: true, brand: 'Visa' });
+          } else {
+            onCardChange({ complete: false });
+          }
+        }}
+      />
+      <Text style={{ color: '#aaa', marginTop: 10 }}>Expiry Date / CVV / Postal Code</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <TextInput style={[styles.cardFieldDummyInput, { flex: 1, marginRight: 10 }]} placeholder="MM/YY" maxLength={5} />
+        <TextInput style={[styles.cardFieldDummyInput, { width: 60 }]} placeholder="CVV" maxLength={4} />
+        <TextInput style={[styles.cardFieldDummyInput, { width: 80, marginLeft: 10 }]} placeholder="Postal" maxLength={6} />
+      </View>
+      <Text style={{ color: '#ffc107', marginTop: 5, fontSize: 12 }}>
+        *This is a placeholder. Use real Stripe SDK for production.
+      </Text>
+    </View>
+  );
+};
+
+// Dummy Payment Confirmation
+const confirmPayment = async (clientSecret, options) => {
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate delay
+  if (Math.random() > 0.15) {
+    return { paymentIntent: { status: 'succeeded' }, error: null };
+  } else {
+    return { paymentIntent: null, error: { message: 'Transaction declined by bank.' } };
+  }
+};
+
+export default class PaymentScreen extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      fadeAnim: new Animated.Value(1),
+      scaleAnim: new Animated.Value(1),
+      cardDetails: null,
+      loading: false,
+    };
+    this.amount = props.route.params?.amount || 100.00;
+    this.orderId = props.route.params?.orderId || 'ORDER-XYS-789';
+  }
+
+  fetchPaymentIntentClientSecret = async () => {
+    const backendUrl = 'https://yourbackend.com/create-payment-intent';
+    try {
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: Math.round(this.amount * 100), currency: 'usd' }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create payment intent');
+      }
+      const { clientSecret } = await response.json();
+      return clientSecret;
+    } catch (error) {
+      console.error('Error fetching client secret:', error);
+      Alert.alert('Payment Error', `Could not initialize payment: ${error.message}`);
+      throw error;
+    }
+  };
+
+  handlePayPress = async () => {
+    const { cardDetails } = this.state;
+
+    if (!cardDetails?.complete) {
+      Alert.alert('Validation Error', 'Please enter complete and valid card details.');
+      return;
+    }
+
+    this.setState({ loading: true });
+    try {
+      const clientSecret = await this.fetchPaymentIntentClientSecret();
+
+      const { paymentIntent, error } = await confirmPayment(clientSecret, {
+        paymentMethodType: 'Card',
+        paymentMethodData: {
+          billingDetails: { email: 'customer@example.com' },
+        },
+      });
+
+      if (error) {
+        Alert.alert('Payment Failed', `Error: ${error.message}`);
+      } else if (paymentIntent?.status === 'succeeded') {
+        Alert.alert('Payment Successful', `Your payment of $${this.amount.toFixed(2)} for Order ${this.orderId} was processed.`);
+        this.animateAndNavigate('OrderHistory');
+      } else {
+        Alert.alert('Payment Status', `Payment might require further action. Status: ${paymentIntent?.status || 'Unknown'}`);
+      }
+    } catch (err) {
+      console.error('Payment process error:', err);
+    } finally {
+      this.setState({ loading: false });
+    }
+  };
+
+  animateAndNavigate = (screenName) => {
+    Animated.parallel([
+      Animated.timing(this.state.fadeAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.ease),
+      }),
+      Animated.timing(this.state.scaleAnim, {
+        toValue: 0.9,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      this.props.navigation.replace(screenName);
+    });
+  };
+
+  render() {
+    const { fadeAnim, scaleAnim, loading } = this.state;
+
+    return (
+      <KeyboardAvoidingView style={styles.fullScreenContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <Animated.View style={[styles.animatedContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+          <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <Text style={styles.headerTitle}>Complete Your Purchase</Text>
+            <Text style={styles.amountText}>Total Amount: ${this.amount.toFixed(2)}</Text>
+
+            <View style={styles.formSection}>
+              <Text style={styles.sectionHeading}>Card Information</Text>
+              <CardField
+                postalCodeEnabled={true}
+                placeholders={{
+                  number: '•••• •••• •••• ••••',
+                  expiration: 'MM/YY',
+                  cvc: 'CVC',
+                  postalCode: 'Postal Code',
+                }}
+                cardStyle={styles.cardFieldStyle}
+                style={styles.cardFieldContainer}
+                onCardChange={card => this.setState({ cardDetails: card })}
+              />
+            </View>
+
+            <TouchableOpacity style={[styles.payButton, loading && styles.buttonDisabled]} onPress={this.handlePayPress} disabled={loading}>
+              {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Pay Now ($ {this.amount.toFixed(2)})</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => this.animateAndNavigate('OrderHistory')} style={styles.backButton} disabled={loading}>
+              <Text style={styles.backButtonText}>Cancel Payment</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.hassantext}>@Designed by Hassan Ali</Text>
+          </ScrollView>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    );
+  }
+}
+
+// Styles
+const styles = StyleSheet.create({
+  fullScreenContainer: {
+    flex: 1,
+    backgroundColor: '#234259',
+  },
+  animatedContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 28,
+    color: '#87cefa',
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  amountText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#00ffff',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  formSection: {
+    width: '100%',
+    backgroundColor: '#345678',
+    borderRadius: 10,
+    padding: 20,
+    marginBottom: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    borderWidth: 1,
+    borderColor: '#456785',
+  },
+  sectionHeading: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#d3d3d3',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  cardFieldContainer: {
+    width: '100%',
+    marginVertical: 10,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  cardFieldStyle: {
+    backgroundColor: '#fff',
+    textColor: '#333',
+    fontSize: 16,
+    placeholderColor: '#aaa',
+  },
+  cardFieldDummyInput: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#333',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 10,
+  },
+  errorText: {
+    color: '#ff6347',
+    fontSize: 14,
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  payButton: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#00bfff',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  buttonDisabled: {
+    backgroundColor: '#90bfff',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  backButton: {
+    width: '100%',
+    height: 50,
+    backgroundColor: '#ff6347',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 15,
+    elevation: 5,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  hassantext: {
+    marginTop: 40,
+    color: '#ccc',
+    fontSize: 12,
+  },
+});

@@ -1,0 +1,174 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TextInput,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  Platform,
+} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
+// Sample product data
+const productsData = [
+  { id: '1', name: 'Leather Jacket', price: 120, image: require('../assets/jacket.png') },
+  { id: '2', name: 'Sneakers', price: 90, image: require('../assets/shoes.png') },
+  { id: '3', name: 'Wrist Watch', price: 150, image: require('../assets/watch.png') },
+  { id: '4', name: 'Backpack', price: 80, image: require('../assets/bagpack.png') },
+  { id: '5', name: 'Sunglasses', price: 60, image: require('../assets/sunglasses.png') },
+];
+
+export default function ProductListingScreen({ navigation }) {
+  const [products, setProducts] = useState(productsData);
+  const [searchText, setSearchText] = useState('');
+
+  useEffect(() => {
+    if (!searchText) {
+      setProducts(productsData);
+    } else {
+      const filtered = productsData.filter((p) =>
+        p.name.toLowerCase().includes(searchText.toLowerCase())
+      );
+      setProducts(filtered);
+    }
+  }, [searchText]);
+
+  const renderProduct = ({ item }) => (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => navigation.navigate('ProductDetail', { product: item })}
+      activeOpacity={0.7}
+    >
+      <Image source={item.image} style={styles.productImage} resizeMode="cover" />
+      <View style={styles.cardContent}>
+        <Text style={styles.productName}>{item.name}</Text>
+        <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+
+        {/* Search Bar with Icon */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={20} color="#999" style={styles.searchIcon} />
+          <TextInput
+            placeholder="Search products..."
+            value={searchText}
+            onChangeText={setSearchText}
+            style={styles.searchInput}
+            placeholderTextColor="#999"
+          />
+        </View>
+
+        <FlatList
+          data={products}
+          keyExtractor={(item) => item.id}
+          renderItem={renderProduct}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={() => (
+            <Text style={styles.noProductsText}>No products found.</Text>
+          )}
+        />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f0f2f5',
+  },
+  container: {
+    flex: 1,
+    padding: 15,
+    backgroundColor: '#f0f2f5',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: 45,
+    fontSize: 16,
+    color: '#000',
+  },
+  list: {
+    paddingBottom: 20,
+  },
+  card: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    marginBottom: 15,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 5,
+      },
+    }),
+  },
+  productImage: {
+    width: 100,
+    height: 100,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+    marginRight: 10,
+  },
+  cardContent: {
+    flex: 1,
+    padding: 15,
+    justifyContent: 'center',
+  },
+  productName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 5,
+  },
+  productPrice: {
+    fontSize: 16,
+    color: '#007bff',
+    fontWeight: 'bold',
+  },
+  noProductsText: {
+    textAlign: 'center',
+    marginTop: 50,
+    fontSize: 18,
+    color: '#666',
+  },
+});
